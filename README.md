@@ -12,7 +12,7 @@ Analysis code and results for the study
 </p>
 
 ### Publication status
-In submission
+Constable Fernandez C, Acosta Ortiz A, García Durán M-C, Saunders R, Solmi F, Tamayo Agudelo W, Idrobo F, Bell V (in submission) Armed conflict exposures are not equally associated with accessing psychosocial support: a study of over 8 million victims of the Colombian armed conflict.
 
 ### Analysis code developed by
 Charlotte Constable Fernandez and Vaughan Bell
