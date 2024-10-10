@@ -22,4 +22,6 @@ This archive contains the [R](https://en.wikipedia.org/wiki/R_(programming_langu
 
 This repository contains a dataset with the extracted meta-analytic data and a Jupyter notebook that reports the analysis and results
 
-1.  [Constable-Fernandez_PAPSIVI_access_analysis.R](https://github.com/vaughanbell/papsivi_access/blob/main/Constable-Fernandez_PAPSIVI_access_analysis.R) - analysis code 
+1.  [Constable-Fernandez_PAPSIVI_access_analysis.R](https://github.com/vaughanbell/papsivi_access/blob/main/Constable-Fernandez_PAPSIVI_access_analysis.R) - main analysis code
+2.  [forest_plot_ests.R](https://github.com/vaughanbell/papsivi_access/blob/main/forest_plot_ests.R) - produce forest plots from output data
+3.  [produce_suppl_table.R](https://github.com/vaughanbell/papsivi_access/blob/main/produce_suppl_table.R) - produce supplementary tables 2 and 3 from output data
