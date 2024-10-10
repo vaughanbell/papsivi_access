@@ -1,3 +1,9 @@
+############################################################################
+#
+# Script to produce figures 2 and 3 forest plots from output data
+#
+############################################################################
+
 library(dplyr)
 library(forester)   # from https://github.com/rdboyes/forester; requires ggplot 3.4.4 for compatibility
 
