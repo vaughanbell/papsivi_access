@@ -8,11 +8,8 @@ library(parallel)
 library(jtools)
 library(table1)
 
-# This removes all objects from memory. Good to ensure you can run the whole script from beginning to end
-# and all data structures are created anew. Best not to leave in the final, published script as it would
-# wipe out all data objects from memory if someone ran it, including those that someone might have in
-# memory from another analysis
-rm(list=ls())
+# This removes all objects from memory. Useful to check reproducibility from a 'cleanb start'
+# rm(list=ls())
 
 # Directories
 # Place to save the output files
