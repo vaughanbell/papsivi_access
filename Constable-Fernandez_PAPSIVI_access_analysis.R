@@ -8,8 +8,11 @@ library(parallel)
 library(jtools)
 library(table1)
 
-# This removes all objects from memory. Useful to check reproducibility from a 'cleanb start'
-# rm(list=ls())
+# This removes all objects from memory. Good to ensure you can run the whole script from beginning to end
+# and all data structures are created anew. Best not to leave in the final, published script as it would
+# wipe out all data objects from memory if someone ran it, including those that someone might have in
+# memory from another analysis
+rm(list=ls())
 
 # Directories
 # Place to save the output files
@@ -17,6 +20,9 @@ output_dir <- "S:/PAPSIVI_Data/VaughanR/PAPSIVI/output/"
 
 # Set number of cores for glmmTMB parallel processing (1 - total core count)
 n_cores <- detectCores() - 1
+
+# Set this to down sample final df to 10% for testing
+testing <- 0
 
 ############################################################################
 #
@@ -71,17 +77,17 @@ ruv_df <- ruv_df |>
                                         "AMENAZA" ~ "amenaza",
                                         "CONFIMANIENTO" ~ "confinamiento",
                                         "DELITOS CONTRA LA LIBERTAD Y LA INTEGRIDAD SEXUAL EN DESARROLLO DEL CONFLICTO ARMADO" ~ "violenciasexual",
-                                        "DESAPARICI”N FORZADA" ~ "desparacion",
+                                        "DESAPARICI√ìN FORZADA" ~ "desparacion",
                                         "DESPLAZAMIENTO FORZADO" ~ "desplazamiento",
                                         "HOMICIDIO" ~ "homocidio",
                                         "LESIONES PERSONALES FISICAS" ~ "lesion_fis",
                                         "LESIONES PERSONALES PSICOLOGICAS" ~ "lesion_psic",
-                                        "MINAS ANTIPERSONAL, MUNICI”N SIN EXPLOTAR Y ARTEFACTO EXPLOSIVO IMPROVISADO" ~ "minas",
+                                        "MINAS ANTIPERSONAL, MUNICI√ìN SIN EXPLOTAR Y ARTEFACTO EXPLOSIVO IMPROVISADO" ~ "minas",
                                         "PERDIDA DE BIENES MUEBLES O INMUEBLES" ~ "perdida_bienes",
                                         "SECUESTRO" ~ "secuestro",
                                         "TORTURA" ~ "tortura",
-                                        "VINCULACI”N DE NI—OS NI—AS Y ADOLESCENTES A ACTIVIDADES RELACIONADAS CON GRUPOS ARMADOS" ~ "reclut_ninos",
-                                        "SIN INFORMACI”N" ~ "no_info"))
+                                        "VINCULACI√ìN DE NI√ëOS NI√ëAS Y ADOLESCENTES A ACTIVIDADES RELACIONADAS CON GRUPOS ARMADOS" ~ "reclut_ninos",
+                                        "SIN INFORMACI√ìN" ~ "no_info"))
 
 # Convert hechovictimizante to dummy variables
 ruv_df <- dummy_cols(ruv_df, select_columns = c("hechovictimizante"), omit_colname_prefix = TRUE)
@@ -105,7 +111,7 @@ ruv_df$sexo <- relevel(ruv_df$sexo, ref = "Male")
 # Recode ethnicity
 ruv_df <- ruv_df |>
   mutate(etnia = case_match(etnia,
-                            "1 - INDÕGENA" ~ "Indigenous",
+                            "1 - IND√çGENA" ~ "Indigenous",
                             "2 - ROM (GITANO)" ~ "Roma",
                             "3 - RAIZAL (SAN ANDRES Y PROVIDENCIA)" ~ "Raizal",
                             "4 - PALENQUERO DE SAN BASILIO" ~ "Palenquero de San Basilio",
@@ -165,7 +171,7 @@ cerac_df <- read.csv(cerac_filename, header = TRUE, stringsAsFactors = TRUE, enc
 # Change variable names
 cerac_df <- cerac_df %>%
   rename(municipio = Municipio) %>%
-  rename(exp = Grupo.de.categorÌa) %>%
+  rename(exp = Grupo.de.categor√≠a) %>%
   rename(municipio_id = X.U.FEFF.Divipola)
 
 # Label the cat variable conflict exposure
@@ -234,6 +240,14 @@ N_per_exp_1st_reg <- first_reg_df %>%
   group_by(hechovictimizante) %>%
   summarise(N = n_distinct(personid)) %>%
   rename(exposure = hechovictimizante)
+
+# Create downsampled version for testing
+if (testing == 1) {
+  orig_df <- df
+  sample_size <- ceiling(0.05 * nrow(df))
+  df <- df[sample(nrow(df), sample_size), ]
+}
+  
 
 ############################################################################
 #
@@ -313,11 +327,11 @@ summ(disability_model_unadj, exp = TRUE, digits = 3)
 #  A single line dataframe with exposure (the main predictor name), estimate (the odds ratio), 95% CIs and cl_lb and cl_ub
 #
 
-run_reg <- function(model_str) {
+run_reg <- function(model_str, function_df) {
   # Run logistic regression model, time and print duration
   print(paste("Running: ", model_str, sep = ""))
   start.time <- Sys.time()
-  reg_model <- glmmTMB(as.formula(model_str), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+  reg_model <- glmmTMB(as.formula(model_str), data = function_df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
   end.time <- Sys.time()
   print(end.time - start.time)
   
@@ -367,7 +381,7 @@ results_df <- data.frame(exposure = character(),
 
 # Iterate through every armed conflict regression model, run it, and append the results to results_df
 for (model_str in model1_str_vec) {
-  model_result_df <- run_reg(model_str)
+  model_result_df <- run_reg(model_str, df)
   colnames(model_result_df) <- colnames(results_df)
   results_df <- rbind(results_df, model_result_df)
 }
@@ -408,7 +422,7 @@ results_df <- data.frame(exposure = character(),
 
 # Iterate through every armed conflict regression model, run it, and append the results to results_df
 for (model_str in model2_str_vec) {
-  model_result_df <- run_reg(model_str)
+  model_result_df <- run_reg(model_str, df)
   colnames(model_result_df) <- colnames(results_df)
   results_df <- rbind(results_df, model_result_df)
 }
@@ -449,7 +463,7 @@ results_df <- data.frame(exposure = character(),
 
 # Iterate through every armed conflict regression model, run it, and append the results to results_df
 for (model_str in model3_str_vec) {
-  model_result_df <- run_reg(model_str)
+  model_result_df <- run_reg(model_str, df)
   colnames(model_result_df) <- colnames(results_df)
   results_df <- rbind(results_df, model_result_df)
 }
@@ -486,22 +500,59 @@ write.csv(model3_results_df, paste(output_dir, "mod3_results.csv", sep = ""), ro
 # Create list of regression model strings, each with the name of the conflict exposure in the right place
 model3_int_sex_str_vec <- paste("indicadorpapsivi ~ ", exp_vec, " * sexo + edad + etnia_min + tipo_regimen + exp + (1|df_reg_count) + (1|municipio_id)", sep = "")
 
-# Iterate through every armed conflict exposure regression model, run it, and write the results
-# Iterating using i so we can track the model_str regression equation and name of the exposure at the same 
+# Same without interaction term
+model3_int_sex_str_vec_woi <- paste("indicadorpapsivi ~ ", exp_vec, " + sexo + edad + etnia_min + tipo_regimen + exp + (1|df_reg_count) + (1|municipio_id)", sep = "")
+
+# Define empty dataframes to append results to
+# For p values for the interaction
+sex_int_p_df <- data.frame(exposure = character(),
+                           p_value = double())
+
+# For results stratified by male sex 
+sexm_results_df <- data.frame(exposure = character(),
+                              estimate = double(),
+                              ci_lb = double(),
+                              ci_ub = double())
+
+# For results stratified by female sex 
+sexf_results_df <- data.frame(exposure = character(),
+                              estimate = double(),
+                              ci_lb = double(),
+                              ci_ub = double())
+
+# For results stratified by other sex 
+sexo_results_df <- data.frame(exposure = character(),
+                              estimate = double(),
+                              ci_lb = double(),
+                              ci_ub = double())
+
+# Iterate through every armed conflict exposure regression model, run it with and without the interaction term,
+# test for an interaction by comparing models with an anova, and then for every significant model, run versions
+# stratified by sex.
+# Iterate using i so we can track the model_str regression equation and name of the exposure at the same 
 for (i in seq_along(model3_int_sex_str_vec)) {
+  
+  # Store predictor
+  pred_str <- exp_vec[i]
   
   # Pull the regression equation string and exposure name string into separate variables for clarity
   model_str <- model3_int_sex_str_vec[i]
-  pred_str <- exp_vec[i]
 
-  # Run the regression
-  print(paste("Running: ", model_str, sep = ""))
+  # Same without interaction term
+  model_str_woi <- model3_int_sex_str_vec_woi[i]
+  
+  # Run the regressions (one with and one without interaction term)
   start.time <- Sys.time()
+
+  print(paste("Running: ", model_str, sep = ""))
   reg_model <- glmmTMB(as.formula(model_str), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+  print(paste("Running: ", model_str_woi, sep = ""))
+  reg_model_woi <- glmmTMB(as.formula(model_str_woi), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+  
   end.time <- Sys.time()
   print(end.time - start.time)
   
-  # Calculate ORs and CIs from model
+  # Calculate ORs and CIs from interaction model
   coef_table <- summary(reg_model)$coefficients$cond 
   odds_ratio_info <- exp(coef_table[,"Estimate"]) 
   conf_int <- exp(confint(reg_model, parm = "beta_", level = 0.95))
@@ -510,12 +561,60 @@ for (i in seq_along(model3_int_sex_str_vec)) {
   conf_int_df <- as.data.frame(conf_int)
   conf_int_df <- rownames_to_column(conf_int_df, "name")
   
-  # Change order of columns and rename
-  conf_int_df <- conf_int_df |>
-    select(exposure = name, estimate = Estimate, ci_lb = "2.5 %", ci_ub = "97.5 %")
+  # Do anova between with and without interaction models to test for significant interaction and 
+  # append result to sex_int_p_df
+  anova_result <- anova(reg_model, reg_model_woi)
+  anova_p_value <- anova_result$`Pr(>Chisq)`[2]
+  new_row <- data.frame(exposure = pred_str, p_value = anova_p_value)
+  sex_int_p_df <- rbind(sex_int_p_df, new_row)
+  
+  # Create regression model str minus the interaction term
+  strat_model_str <- gsub("\\* sexo ", "", model_str)
 
-  write.csv(conf_int_df, paste(output_dir, "model3_int_sex_", pred_str, "_results.csv", sep = ""), row.names = FALSE)
+  # If significant interaction, calculate sex stratified values
+  if (anova_p_value < 0.05) {
+    
+    # Run sex-stratified regressions and store
+    stratified_df <- df %>%
+      filter(sexo == "Male")
+    mstrat_results_df <- run_reg(strat_model_str, stratified_df)
+    sexm_results_df <- rbind(sexm_results_df, mstrat_results_df)
+    
+    stratified_df <- df %>%
+      filter(sexo == "Female")
+    fstrat_results_df <- run_reg(strat_model_str, stratified_df)
+    sexf_results_df <- rbind(sexf_results_df, fstrat_results_df)
+    
+    stratified_df <- df %>%
+      filter(sexo == "Other")
+    ostrat_results_df <- run_reg(strat_model_str, stratified_df)
+    sexo_results_df <- rbind(sexo_results_df, ostrat_results_df)
+  }
 }
+
+print("Finished sex interaction analyses")
+
+# Add variable labelling what level the estimate is stratified from
+sexm_results_df <- sexm_results_df %>%
+  mutate(sexo = "Male")
+
+sexf_results_df <- sexf_results_df %>%
+  mutate(sexo = "Female")
+
+sexo_results_df <- sexo_results_df %>%
+  mutate(sexo = "Other")
+
+# Combine the results into a single dataframe
+combined_strat_df <- bind_rows(sexm_results_df, sexf_results_df, sexo_results_df)
+
+# Sort for ease of reading
+combined_strat_df <- combined_strat_df %>%
+  arrange(exposure, sexo)
+
+# Write p values for interaction and stratified results to file
+write.csv(sex_int_p_df, paste(output_dir, "mod3_int_sex_pvalues.csv", sep = ""), row.names = FALSE)
+write.csv(combined_strat_df, paste(output_dir, "mod3_strat_sex_results.csv", sep = ""), row.names = FALSE)
+
 
 #
 # Healthcare regime
@@ -524,21 +623,51 @@ for (i in seq_along(model3_int_sex_str_vec)) {
 # Create list of regression model strings, each with the name of the conflict exposure in the right place
 model3_int_reg_str_vec <- paste("indicadorpapsivi ~ ", exp_vec, " * tipo_regimen + edad + etnia_min + sexo + exp + (1|df_reg_count) + (1|municipio_id)", sep = "")
 
+# Same without interaction term
+model3_int_reg_str_vec_woi <- paste("indicadorpapsivi ~ ", exp_vec, " + tipo_regimen + edad + etnia_min + sexo + exp + (1|df_reg_count) + (1|municipio_id)", sep = "")
+
+# Define empty dataframes to append results to
+# For p values for the interaction
+reg_int_p_df <- data.frame(exposure = character(),
+                           p_value = double())
+
+# For results stratified by contributory healthcare regime
+regc_results_df <- data.frame(exposure = character(),
+                              estimate = double(),
+                              ci_lb = double(),
+                              ci_ub = double())
+
+# For results stratified by subsidised healthcare regime
+regs_results_df <- data.frame(exposure = character(),
+                              estimate = double(),
+                              ci_lb = double(),
+                              ci_ub = double())
+
 # Iterate through every armed conflict exposure regression model, run it, and write the results
 # Iterating using i so we can track the model_str regression equation and name of the exposure at the same 
 for (i in seq_along(model3_int_reg_str_vec)) {
-  # Pull the regression equation string and exposure name string into separate variables for clarity
-  model_str <- model3_int_reg_str_vec[i]
+
+  # Store predictor
   pred_str <- exp_vec[i]
   
-  # Run the regression
-  print(paste("Running: ", model_str, sep = ""))
+  # Pull the regression equation string and exposure name string into separate variables for clarity
+  model_str <- model3_int_reg_str_vec[i]
+  
+  # Same without interaction term
+  model_str_woi <- model3_int_reg_str_vec_woi[i]
+  
+  # Run the regressions (one with and one without interaction term)
   start.time <- Sys.time()
+  
+  print(paste("Running: ", model_str, sep = ""))
   reg_model <- glmmTMB(as.formula(model_str), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+  print(paste("Running: ", model_str_woi, sep = ""))
+  reg_model_woi <- glmmTMB(as.formula(model_str_woi), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+  
   end.time <- Sys.time()
   print(end.time - start.time)
   
-  # Calculate ORs and CIs from model
+  # Calculate ORs and CIs from the interaction model
   coef_table <- summary(reg_model)$coefficients$cond 
   odds_ratio_info <- exp(coef_table[,"Estimate"]) 
   conf_int <- exp(confint(reg_model, parm = "beta_", level = 0.95))
@@ -547,11 +676,51 @@ for (i in seq_along(model3_int_reg_str_vec)) {
   conf_int_df <- as.data.frame(conf_int)
   conf_int_df <- rownames_to_column(conf_int_df, "name")
 
-  conf_int_df <- conf_int_df |>
-    select(exposure = name, estimate = Estimate, ci_lb = "2.5 %", ci_ub = "97.5 %")
+  # Do anova between with and without interaction models to test for significant interaction and 
+  # append p values to reg_int_p_df
+  anova_result <- anova(reg_model, reg_model_woi)
+  anova_p_value <- anova_result$`Pr(>Chisq)`[2]
+  new_row <- data.frame(exposure = pred_str, p_value = anova_p_value)
+  reg_int_p_df <- rbind(reg_int_p_df, new_row)
+  
+  # Create regression model str minus the interaction term
+  strat_model_str <- gsub("\\* tipo_regimen ", "", model_str)
+  
+  # If significant interaction, calculate healthcare-regime stratified estimates
+  if (anova_p_value < 0.05) {
 
-  write.csv(conf_int_df, paste(output_dir, "model3_int_reg_", pred_str, "_results.csv", sep = ""), row.names = FALSE)
+    # Run healthcare regime-stratified regressions and store
+    stratified_df <- df %>%
+      filter(tipo_regimen == "Contributive")
+    regc_strat_results_df <- run_reg(strat_model_str, stratified_df)
+    regc_results_df <- rbind(regc_results_df, regc_strat_results_df)
+    
+    stratified_df <- df %>%
+      filter(tipo_regimen == "Subsidised")
+    regs_strat_results_df <- run_reg(strat_model_str, stratified_df)
+    regs_results_df <- rbind(regs_results_df, regs_strat_results_df)
+  }
 }
+
+print("Finished healthcare regime interaction analyses")
+
+# Add variable labelling what level the estimate is stratified from
+regc_results_df <- regc_results_df %>%
+  mutate(tipo_regimen = "Contributory")
+
+regs_results_df <- regs_results_df %>%
+  mutate(tipo_regimen = "Subsidised")
+
+# Combine the results into a single dataframe
+combined_strat_df <- bind_rows(regc_results_df, regs_results_df)
+
+# Sort for ease of reading
+combined_strat_df <- combined_strat_df %>%
+  arrange(exposure, tipo_regimen)
+
+# Write p values for interaction and stratified results to file
+write.csv(reg_int_p_df, paste(output_dir, "mod3_int_reg_pvalues.csv", sep = ""), row.names = FALSE)
+write.csv(combined_strat_df, paste(output_dir, "mod3_strat_reg_results.csv", sep = ""), row.names = FALSE)
 
 
 #
@@ -561,17 +730,47 @@ for (i in seq_along(model3_int_reg_str_vec)) {
 # Create list of regression model strings, each with the name of the conflict exposure in the right place
 model3_int_etn_str_vec <- paste("indicadorpapsivi ~ ", exp_vec, " * etnia_min + tipo_regimen + edad + sexo + exp + (1|df_reg_count) + (1|municipio_id)", sep = "")
 
+# Same without interaction term
+model3_int_etn_str_vec_woi <- paste("indicadorpapsivi ~ ", exp_vec, " + etnia_min + tipo_regimen + edad + sexo + exp + (1|df_reg_count) + (1|municipio_id)", sep = "")
+
+# Define empty dataframes to append results to
+# For p values for the interaction
+etn_int_p_df <- data.frame(exposure = character(),
+                           p_value = double())
+
+# For results stratified by ethnic majority status
+etn_maj_results_df <- data.frame(exposure = character(),
+                                 estimate = double(),
+                                 ci_lb = double(),
+                                 ci_ub = double())
+
+# For results stratified by ethnic minority status
+etn_min_results_df <- data.frame(exposure = character(),
+                                 estimate = double(),
+                                 ci_lb = double(),
+                                 ci_ub = double())
+
 # Iterate through every armed conflict exposure regression model, run it, and write the results
 # Iterating using i so we can track the model_str regression equation and name of the exposure at the same 
 for (i in seq_along(model3_int_etn_str_vec)) {
-  # Pull the regression equation string and exposure name string into separate variables for clarity
-  model_str <- model3_int_etn_str_vec[i]
+  
+  # Store predictor
   pred_str <- exp_vec[i]
   
+  # Pull the regression equation string and exposure name string into separate variables for clarity
+  model_str <- model3_int_etn_str_vec[i]
+  
+  # Same without interaction term
+  model_str_woi <- model3_int_etn_str_vec_woi[i]
+  
   # Run the regression
-  print(paste("Running: ", model_str, sep = ""))
   start.time <- Sys.time()
+  
+  print(paste("Running: ", model_str, sep = ""))
   reg_model <- glmmTMB(as.formula(model_str), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+  print(paste("Running: ", model_str_woi, sep = ""))
+  reg_model_woi <- glmmTMB(as.formula(model_str_woi), data = df, family = binomial(link = "logit"), control = glmmTMBControl(parallel = n_cores))
+
   end.time <- Sys.time()
   print(end.time - start.time)
   
@@ -580,15 +779,56 @@ for (i in seq_along(model3_int_etn_str_vec)) {
   odds_ratio_info <- exp(coef_table[,"Estimate"]) 
   conf_int <- exp(confint(reg_model, parm = "beta_", level = 0.95))
   
+  # Extract estimates and CIs from the interaction model
+  conf_int_df <- as.data.frame(conf_int)
+  conf_int_df <- rownames_to_column(conf_int_df, "name")
+  
   # Extract estimates and CIs
   conf_int_df <- as.data.frame(conf_int)
   conf_int_df <- rownames_to_column(conf_int_df, "name")
-
-  conf_int_df <- conf_int_df |>
-    select(exposure = name, estimate = Estimate, ci_lb = "2.5 %", ci_ub = "97.5 %")
   
-  write.csv(conf_int_df, paste(output_dir, "model3_int_etn_", pred_str, "_results.csv", sep = ""), row.names = FALSE)
+  # Do anova between with and without interaction models to test for significant interaction and 
+  # append p values to etn_int_p_df
+  anova_result <- anova(reg_model, reg_model_woi)
+  anova_p_value <- anova_result$`Pr(>Chisq)`[2]
+  new_row <- data.frame(exposure = pred_str, p_value = anova_p_value)
+  etn_int_p_df <- rbind(etn_int_p_df, new_row)
+
+  # Create regression model str minus the interaction term
+  strat_model_str <- gsub("\\* etnia_min ", "", model_str)
+  
+  # If significant interaction, calculate ethnic majority / minority stratified estimates
+  if (anova_p_value < 0.05) {
+    # Run ethnic majority/minority-stratified regressions and store
+    stratified_df <- df %>%
+      filter(etnia_min == "No")
+    etn_maj_strat_results_df <- run_reg(strat_model_str, stratified_df)
+    etn_maj_results_df <- rbind(etn_maj_results_df, etn_maj_strat_results_df)
+    
+    stratified_df <- df %>%
+      filter(etnia_min == "Yes")
+    etn_min_strat_results_df <- run_reg(strat_model_str, stratified_df)
+    etn_min_results_df <- rbind(etn_min_results_df, etn_min_strat_results_df)
+  }
 }
+
+# Add variable labelling what level the estimate is stratified from
+etn_maj_results_df <- etn_maj_results_df %>%
+  mutate(etnia_min = "No")
+
+etn_min_results_df <- etn_min_results_df %>%
+  mutate(etnia_min = "Yes")
+
+# Combine the results into a single dataframe
+combined_strat_df <- bind_rows(etn_maj_results_df, etn_min_results_df)
+
+# Sort for ease of reading
+combined_strat_df <- combined_strat_df %>%
+  arrange(exposure, etnia_min)
+
+# Write p values for interaction and stratified results to file
+write.csv(etn_int_p_df, paste(output_dir, "mod3_int_etn_pvalues.csv", sep = ""), row.names = FALSE)
+write.csv(combined_strat_df, paste(output_dir, "mod3_strat_etn_results.csv", sep = ""), row.names = FALSE)
 
 
 ############################################################################
@@ -619,7 +859,7 @@ results_df <- data.frame(exposure = character(),
 
 # Iterate through every armed conflict regression model, run it, and append the results to results_df
 for (model_str in model1_str_vec) {
-  model_result_df <- run_reg(model_str)
+  model_result_df <- run_reg(model_str, df)
   colnames(model_result_df) <- colnames(results_df)
   results_df <- rbind(results_df, model_result_df)
 }
@@ -660,7 +900,7 @@ results_df <- data.frame(exposure = character(),
 
 # Iterate through every armed conflict regression model, run it, and append the results to results_df
 for (model_str in model2_str_vec) {
-  model_result_df <- run_reg(model_str)
+  model_result_df <- run_reg(model_str, df)
   colnames(model_result_df) <- colnames(results_df)
   results_df <- rbind(results_df, model_result_df)
 }
@@ -701,7 +941,7 @@ results_df <- data.frame(exposure = character(),
 
 # Iterate through every armed conflict regression model, run it, and append the results to results_df
 for (model_str in model3_str_vec) {
-  model_result_df <- run_reg(model_str)
+  model_result_df <- run_reg(model_str, df)
   colnames(model_result_df) <- colnames(results_df)
   results_df <- rbind(results_df, model_result_df)
 }
