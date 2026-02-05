@@ -12,7 +12,7 @@ Analysis code and results for the study
 </p>
 
 ### Publication status
-Constable Fernandez C, Acosta Ortiz A, García Durán M-C, Saunders R, Solmi F, Tamayo Agudelo W, Idrobo F, Bell V (in submission) Armed conflict exposure types are not equally associated with accessing psychosocial support: a study of over 8 million victims of the Colombian armed conflict.
+Constable Fernandez, C., Acosta-Ortiz, A., García Durán, M. C., Saunders, R., Solmi, F., Tamayo-Agudelo, W., Idrobo, F., Bell, V. (2025) Armed conflict exposure types are not equally associated with access to psychosocial support: a study of over 8 million victims of the Colombian armed conflict. _International Journal of Social Psychiatry_, 7, 1281–1291. https://doi.org/10.1177/00207640251336726
 
 ### Analysis code developed by
 Charlotte Constable Fernandez and Vaughan Bell
